@@ -31,7 +31,7 @@ void main() {
       FlutterProject projectUnderTest;
 
       setUp(() {
-        fs = MemoryFileSystem();
+        fs = MemoryFileSystem.test();
         mockXcodeProjectInterpreter = MockXcodeProjectInterpreter();
 
         final Directory currentDirectory = fs.currentDirectory;
@@ -43,11 +43,14 @@ void main() {
         projectUnderTest.macos.xcodeWorkspace.createSync(recursive: true);
 
         projectUnderTest.dartTool.createSync(recursive: true);
+        projectUnderTest.packagesFile.createSync(recursive: true);
         projectUnderTest.android.ephemeralDirectory.createSync(recursive: true);
 
         projectUnderTest.ios.ephemeralDirectory.createSync(recursive: true);
-        projectUnderTest.ios.generatedXcodePropertiesFile.createSync(recursive: true);
-        projectUnderTest.ios.generatedEnvironmentVariableExportScript.createSync(recursive: true);
+        projectUnderTest.ios.generatedXcodePropertiesFile
+            .createSync(recursive: true);
+        projectUnderTest.ios.generatedEnvironmentVariableExportScript
+            .createSync(recursive: true);
         projectUnderTest.ios.compiledDartFramework.createSync(recursive: true);
         projectUnderTest.ios.flutterPodspec.createSync(recursive: true);
 
@@ -55,31 +58,45 @@ void main() {
         projectUnderTest.macos.ephemeralDirectory.createSync(recursive: true);
         projectUnderTest.windows.ephemeralDirectory.createSync(recursive: true);
         projectUnderTest.flutterPluginsFile.createSync(recursive: true);
-        projectUnderTest.flutterPluginsDependenciesFile.createSync(recursive: true);
+        projectUnderTest.flutterPluginsDependenciesFile
+            .createSync(recursive: true);
       });
 
-      testUsingContext('$CleanCommand removes build and .dart_tool and ephemeral directories, cleans Xcode', () async {
+      testUsingContext(
+          '$CleanCommand removes build and .dart_tool and ephemeral directories, cleans Xcode',
+          () async {
         when(mockXcode.isInstalledAndMeetsVersionCheck).thenReturn(true);
         await CleanCommand().runCommand();
 
         expect(buildDirectory.existsSync(), isFalse);
         expect(projectUnderTest.dartTool.existsSync(), isFalse);
-        expect(projectUnderTest.android.ephemeralDirectory.existsSync(), isFalse);
+        expect(
+            projectUnderTest.android.ephemeralDirectory.existsSync(), isFalse);
 
         expect(projectUnderTest.ios.ephemeralDirectory.existsSync(), isFalse);
-        expect(projectUnderTest.ios.generatedXcodePropertiesFile.existsSync(), isFalse);
-        expect(projectUnderTest.ios.generatedEnvironmentVariableExportScript.existsSync(), isFalse);
-        expect(projectUnderTest.ios.compiledDartFramework.existsSync(), isFalse);
+        expect(projectUnderTest.ios.generatedXcodePropertiesFile.existsSync(),
+            isFalse);
+        expect(
+            projectUnderTest.ios.generatedEnvironmentVariableExportScript
+                .existsSync(),
+            isFalse);
+        expect(
+            projectUnderTest.ios.compiledDartFramework.existsSync(), isFalse);
         expect(projectUnderTest.ios.flutterPodspec.existsSync(), isFalse);
 
         expect(projectUnderTest.linux.ephemeralDirectory.existsSync(), isFalse);
         expect(projectUnderTest.macos.ephemeralDirectory.existsSync(), isFalse);
-        expect(projectUnderTest.windows.ephemeralDirectory.existsSync(), isFalse);
+        expect(
+            projectUnderTest.windows.ephemeralDirectory.existsSync(), isFalse);
 
         expect(projectUnderTest.flutterPluginsFile.existsSync(), isFalse);
-        expect(projectUnderTest.flutterPluginsDependenciesFile.existsSync(), isFalse);
+        expect(projectUnderTest.flutterPluginsDependenciesFile.existsSync(),
+            isFalse);
+        expect(projectUnderTest.packagesFile.existsSync(), isFalse);
 
-        verify(mockXcodeProjectInterpreter.cleanWorkspace(any, 'Runner', verbose: false)).called(2);
+        verify(mockXcodeProjectInterpreter.cleanWorkspace(any, 'Runner',
+                verbose: false))
+            .called(2);
       }, overrides: <Type, Generator>{
         FileSystem: () => fs,
         ProcessManager: () => FakeProcessManager.any(),
@@ -90,7 +107,9 @@ void main() {
       testUsingContext('$CleanCommand cleans Xcode verbosely', () async {
         when(mockXcode.isInstalledAndMeetsVersionCheck).thenReturn(true);
         await CleanCommand(verbose: true).runCommand();
-        verify(mockXcodeProjectInterpreter.cleanWorkspace(any, 'Runner', verbose: true)).called(2);
+        verify(mockXcodeProjectInterpreter.cleanWorkspace(any, 'Runner',
+                verbose: true))
+            .called(2);
       }, overrides: <Type, Generator>{
         FileSystem: () => fs,
         ProcessManager: () => FakeProcessManager.any(),
@@ -105,17 +124,20 @@ void main() {
         windowsPlatform = MockPlatform();
       });
 
-      testUsingContext('$CleanCommand prints a helpful error message on Windows', () async {
+      testUsingContext(
+          '$CleanCommand prints a helpful error message on Windows', () async {
         when(mockXcode.isInstalledAndMeetsVersionCheck).thenReturn(false);
         when(windowsPlatform.isWindows).thenReturn(true);
 
         final MockFile mockFile = MockFile();
         when(mockFile.existsSync()).thenReturn(true);
 
-        when(mockFile.deleteSync(recursive: true)).thenThrow(const FileSystemException('Deletion failed'));
+        when(mockFile.deleteSync(recursive: true))
+            .thenThrow(const FileSystemException('Deletion failed'));
         final CleanCommand command = CleanCommand();
         command.deleteFile(mockFile);
-        expect(testLogger.errorText, contains('A program may still be using a file'));
+        expect(testLogger.errorText,
+            contains('A program may still be using a file'));
         verify(mockFile.deleteSync(recursive: true)).called(1);
       }, overrides: <Type, Generator>{
         Platform: () => windowsPlatform,
@@ -126,7 +148,8 @@ void main() {
         when(mockXcode.isInstalledAndMeetsVersionCheck).thenReturn(false);
 
         final MockFile mockFile = MockFile();
-        when(mockFile.existsSync()).thenThrow(const FileSystemException('OS error: Access Denied'));
+        when(mockFile.existsSync())
+            .thenThrow(const FileSystemException('OS error: Access Denied'));
         when(mockFile.path).thenReturn('foo.dart');
 
         final CleanCommand command = CleanCommand();
@@ -142,12 +165,17 @@ void main() {
 }
 
 class MockFile extends Mock implements File {}
+
 class MockPlatform extends Mock implements Platform {}
+
 class MockXcode extends Mock implements Xcode {}
 
-class MockXcodeProjectInterpreter extends Mock implements XcodeProjectInterpreter {
+class MockXcodeProjectInterpreter extends Mock
+    implements XcodeProjectInterpreter {
   @override
-  Future<XcodeProjectInfo> getInfo(String projectPath, {String projectFilename}) async {
-    return XcodeProjectInfo(null, null, <String>['Runner'], BufferLogger.test());
+  Future<XcodeProjectInfo> getInfo(String projectPath,
+      {String projectFilename}) async {
+    return XcodeProjectInfo(
+        null, null, <String>['Runner'], BufferLogger.test());
   }
 }

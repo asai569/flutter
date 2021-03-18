@@ -41,12 +41,14 @@ import 'mocks.dart';
 import 'throwing_pub.dart';
 
 export 'package:flutter_tools/src/base/context.dart' show Generator;
-export 'fake_process_manager.dart' show ProcessManager, FakeProcessManager, FakeCommand;
+export 'fake_process_manager.dart'
+    show ProcessManager, FakeProcessManager, FakeCommand;
 
 /// Return the test logger. This assumes that the current Logger is a BufferLogger.
 BufferLogger get testLogger => context.get<Logger>() as BufferLogger;
 
-FakeDeviceManager get testDeviceManager => context.get<DeviceManager>() as FakeDeviceManager;
+FakeDeviceManager get testDeviceManager =>
+    context.get<DeviceManager>() as FakeDeviceManager;
 FakeDoctor get testDoctor => context.get<Doctor>() as FakeDoctor;
 
 typedef ContextInitializer = void Function(AppContext testContext);
@@ -58,17 +60,19 @@ void testUsingContext(
   Map<Type, Generator> overrides = const <Type, Generator>{},
   bool initializeFlutterRoot = true,
   String testOn,
-  bool skip, // should default to `false`, but https://github.com/dart-lang/test/issues/545 doesn't allow this
+  Timeout timeout,
+  bool
+      skip, // should default to `false`, but https://github.com/dart-lang/test/issues/545 doesn't allow this
 }) {
   if (overrides[FileSystem] != null && overrides[ProcessManager] == null) {
     throw StateError(
-      'If you override the FileSystem context you must also provide a ProcessManager, '
-      'otherwise the processes you launch will not be dealing with the same file system '
-      'that you are dealing with in your test.'
-    );
+        'If you override the FileSystem context you must also provide a ProcessManager, '
+        'otherwise the processes you launch will not be dealing with the same file system '
+        'that you are dealing with in your test.');
   }
   if (overrides.containsKey(ProcessUtils)) {
-    throw StateError('Do not inject ProcessUtils for testing, use ProcessManager instead.');
+    throw StateError(
+        'Do not inject ProcessUtils for testing, use ProcessManager instead.');
   }
 
   // Ensure we don't rely on the default [Config] constructor which will
@@ -90,6 +94,7 @@ void testUsingContext(
       logger: globals.logger,
     );
   }
+
   PersistentToolState buildPersistentToolState(FileSystem fs) {
     configDir ??= globals.fs.systemTempDirectory.createTempSync(
       'flutter_config_dir_test.',
@@ -105,7 +110,8 @@ void testUsingContext(
       return context.run<dynamic>(
         name: 'mocks',
         overrides: <Type, Generator>{
-          AnsiTerminal: () => AnsiTerminal(platform: globals.platform, stdio: globals.stdio),
+          AnsiTerminal: () =>
+              AnsiTerminal(platform: globals.platform, stdio: globals.stdio),
           Config: () => buildConfig(globals.fs),
           DeviceManager: () => FakeDeviceManager(),
           Doctor: () => FakeDoctor(globals.logger),
@@ -113,21 +119,21 @@ void testUsingContext(
           HttpClient: () => MockHttpClient(),
           IOSSimulatorUtils: () {
             final MockIOSSimulatorUtils mock = MockIOSSimulatorUtils();
-            when(mock.getAttachedDevices()).thenAnswer((Invocation _) async => <IOSSimulator>[]);
+            when(mock.getAttachedDevices())
+                .thenAnswer((Invocation _) async => <IOSSimulator>[]);
             return mock;
           },
           OutputPreferences: () => OutputPreferences.test(),
           Logger: () => BufferLogger(
-            terminal: globals.terminal,
-            outputPreferences: globals.outputPreferences,
-          ),
+                terminal: globals.terminal,
+                outputPreferences: globals.outputPreferences,
+              ),
           OperatingSystemUtils: () => FakeOperatingSystemUtils(),
           PersistentToolState: () => buildPersistentToolState(globals.fs),
           SimControl: () => MockSimControl(),
           Usage: () => FakeUsage(),
           XcodeProjectInterpreter: () => FakeXcodeProjectInterpreter(),
           FileSystem: () => LocalFileSystemBlockingSetCurrentDirectory(),
-          TimeoutConfiguration: () => const TimeoutConfiguration(),
           PlistParser: () => FakePlistParser(),
           Signals: () => FakeSignals(),
           Pub: () => ThrowingPub(), // prevent accidentally using pub.
@@ -152,12 +158,14 @@ void testUsingContext(
                   return await testMethod();
                 },
               );
-            // This catch rethrows, so doesn't need to catch only Exception.
-            } catch (error) { // ignore: avoid_catches_without_on_clauses
+              // This catch rethrows, so doesn't need to catch only Exception.
+            } catch (error) {
+              // ignore: avoid_catches_without_on_clauses
               _printBufferedErrors(context);
               rethrow;
             }
-          }, onError: (Object error, StackTrace stackTrace) { // ignore: deprecated_member_use
+          }, onError: (Object error, StackTrace stackTrace) {
+            // ignore: deprecated_member_use
             print(error);
             print(stackTrace);
             _printBufferedErrors(context);
@@ -173,9 +181,10 @@ void testUsingContext(
       // If a test needs a BotDetector that does not always return true, it
       // can provide the AlwaysFalseBotDetector in the overrides, or its own
       // BotDetector implementation in the overrides.
-      BotDetector: overrides[BotDetector] ?? () => const AlwaysTrueBotDetector(),
+      BotDetector:
+          overrides[BotDetector] ?? () => const AlwaysTrueBotDetector(),
     });
-  }, testOn: testOn, skip: skip);
+  }, testOn: testOn, skip: skip, timeout: timeout);
 }
 
 void _printBufferedErrors(AppContext testContext) {
@@ -218,7 +227,8 @@ class FakeDeviceManager implements DeviceManager {
   Future<List<Device>> getAllConnectedDevices() async => devices;
 
   @override
-  Future<List<Device>> refreshAllConnectedDevices({ Duration timeout }) async => devices;
+  Future<List<Device>> refreshAllConnectedDevices({Duration timeout}) async =>
+      devices;
 
   @override
   Future<List<Device>> getDevicesById(String deviceId) async {
@@ -244,12 +254,14 @@ class FakeDeviceManager implements DeviceManager {
   List<DeviceDiscovery> get deviceDiscoverers => <DeviceDiscovery>[];
 
   @override
-  bool isDeviceSupportedForProject(Device device, FlutterProject flutterProject) {
+  bool isDeviceSupportedForProject(
+      Device device, FlutterProject flutterProject) {
     return device.isSupportedForProject(flutterProject);
   }
 
   @override
-  Future<List<Device>> findTargetDevices(FlutterProject flutterProject, { Duration timeout }) async {
+  Future<List<Device>> findTargetDevices(FlutterProject flutterProject,
+      {Duration timeout}) async {
     return devices;
   }
 }
@@ -271,6 +283,7 @@ class FakeDoctor extends Doctor {
   bool get canLaunchAnything => true;
 
   @override
+
   /// Replaces the android workflow with a version that overrides licensesAccepted,
   /// to prevent individual tests from having to mock out the process for
   /// the Doctor.
@@ -287,7 +300,8 @@ class FakeDoctor extends Doctor {
 
 class MockSimControl extends Mock implements SimControl {
   MockSimControl() {
-    when(getConnectedDevices()).thenAnswer((Invocation _) async => <SimDevice>[]);
+    when(getConnectedDevices())
+        .thenAnswer((Invocation _) async => <SimDevice>[]);
   }
 }
 
@@ -299,7 +313,7 @@ class FakeOperatingSystemUtils implements OperatingSystemUtils {
   HostPlatform hostPlatform = HostPlatform.linux_x64;
 
   @override
-  void chmod(FileSystemEntity entity, String mode) { }
+  void chmod(FileSystemEntity entity, String mode) {}
 
   @override
   File which(String execName) => null;
@@ -311,13 +325,10 @@ class FakeOperatingSystemUtils implements OperatingSystemUtils {
   File makePipe(String path) => null;
 
   @override
-  void zip(Directory data, File zipFile) { }
+  void unzip(File file, Directory targetDirectory) {}
 
   @override
-  void unzip(File file, Directory targetDirectory) { }
-
-  @override
-  void unpack(File gzippedTarFile, Directory targetDirectory) { }
+  void unpack(File gzippedTarFile, Directory targetDirectory) {}
 
   @override
   Stream<List<int>> gzipLevel1Stream(Stream<List<int>> stream) => stream;
@@ -336,38 +347,38 @@ class MockIOSSimulatorUtils extends Mock implements IOSSimulatorUtils {}
 
 class FakeUsage implements Usage {
   @override
-  bool get isFirstRun => false;
-
-  @override
   bool get suppressAnalytics => false;
 
   @override
-  set suppressAnalytics(bool value) { }
+  set suppressAnalytics(bool value) {}
 
   @override
   bool get enabled => true;
 
   @override
-  set enabled(bool value) { }
+  set enabled(bool value) {}
 
   @override
   String get clientId => '00000000-0000-4000-0000-000000000000';
 
   @override
-  void sendCommand(String command, { Map<String, String> parameters }) { }
+  void sendCommand(String command, {Map<String, String> parameters}) {}
 
   @override
-  void sendEvent(String category, String parameter, {
+  void sendEvent(
+    String category,
+    String parameter, {
     String label,
     int value,
     Map<String, String> parameters,
-  }) { }
+  }) {}
 
   @override
-  void sendTiming(String category, String variableName, Duration duration, { String label }) { }
+  void sendTiming(String category, String variableName, Duration duration,
+      {String label}) {}
 
   @override
-  void sendException(dynamic exception) { }
+  void sendException(dynamic exception) {}
 
   @override
   Stream<Map<String, dynamic>> get onSend => null;
@@ -376,7 +387,7 @@ class FakeUsage implements Usage {
   Future<void> ensureAnalyticsSent() => Future<void>.value();
 
   @override
-  void printWelcome() { }
+  void printWelcome() {}
 }
 
 class FakeXcodeProjectInterpreter implements XcodeProjectInterpreter {
@@ -405,12 +416,14 @@ class FakeXcodeProjectInterpreter implements XcodeProjectInterpreter {
   }
 
   @override
-  Future<void> cleanWorkspace(String workspacePath, String scheme, { bool verbose = false }) {
+  Future<void> cleanWorkspace(String workspacePath, String scheme,
+      {bool verbose = false}) {
     return null;
   }
 
   @override
-  Future<XcodeProjectInfo> getInfo(String projectPath, {String projectFilename}) async {
+  Future<XcodeProjectInfo> getInfo(String projectPath,
+      {String projectFilename}) async {
     return XcodeProjectInfo(
       <String>['Runner'],
       <String>['Debug', 'Release'],
@@ -418,16 +431,12 @@ class FakeXcodeProjectInterpreter implements XcodeProjectInterpreter {
       BufferLogger.test(),
     );
   }
-}
-
-class MockFlutterVersion extends Mock implements FlutterVersion {
-  MockFlutterVersion({bool isStable = false}) : _isStable = isStable;
-
-  final bool _isStable;
 
   @override
-  bool get isMaster => !_isStable;
+  List<String> xcrunCommand() => <String>['xcrun'];
 }
+
+class MockFlutterVersion extends Mock implements FlutterVersion {}
 
 class MockClock extends Mock implements SystemClock {}
 
@@ -437,23 +446,25 @@ class MockCrashReporter extends Mock implements CrashReporter {}
 
 class FakePlistParser implements PlistParser {
   @override
-  Map<String, dynamic> parseFile(String plistFilePath) => const <String, dynamic>{};
+  Map<String, dynamic> parseFile(String plistFilePath) =>
+      const <String, dynamic>{};
 
   @override
   String getValueFromFile(String plistFilePath, String key) => null;
 }
 
 class LocalFileSystemBlockingSetCurrentDirectory extends LocalFileSystem {
-  LocalFileSystemBlockingSetCurrentDirectory() : super.test(
-    signals: LocalSignals.instance,
-  );
+  LocalFileSystemBlockingSetCurrentDirectory()
+      : super.test(
+          signals: LocalSignals.instance,
+        );
 
   @override
   set currentDirectory(dynamic value) {
     throw 'globals.fs.currentDirectory should not be set on the local file system during '
-          'tests as this can cause race conditions with concurrent tests. '
-          'Consider using a MemoryFileSystem for testing if possible or refactor '
-          'code to not require setting globals.fs.currentDirectory.';
+        'tests as this can cause race conditions with concurrent tests. '
+        'Consider using a MemoryFileSystem for testing if possible or refactor '
+        'code to not require setting globals.fs.currentDirectory.';
   }
 }
 

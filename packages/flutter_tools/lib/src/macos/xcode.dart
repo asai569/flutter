@@ -6,7 +6,6 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 import 'package:process/process.dart';
-import 'package:vm_service/vm_service_io.dart' as vm_service_io;
 
 import '../artifacts.dart';
 import '../base/common.dart';
@@ -16,6 +15,7 @@ import '../base/logger.dart';
 import '../base/os.dart';
 import '../base/platform.dart';
 import '../base/process.dart';
+import '../base/version.dart';
 import '../build_info.dart';
 import '../cache.dart';
 import '../convert.dart';
@@ -27,15 +27,8 @@ import '../ios/mac.dart';
 import '../ios/xcodeproj.dart';
 import '../reporting/reporting.dart';
 
-const int kXcodeRequiredVersionMajor = 11;
-const int kXcodeRequiredVersionMinor = 0;
-const int kXcodeRequiredVersionPatch = 0;
-
-enum SdkType {
-  iPhone,
-  iPhoneSimulator,
-  macOS,
-}
+Version get xcodeRequiredVersion => Version(11, 0, 0, text: '11.0');
+Version get xcodeRecommendedVersion => Version(12, 0, 1, text: '12.0.1');
 
 /// SDK name passed to `xcrun --sdk`. Corresponds to undocumented Xcode
 /// SUPPORTED_PLATFORMS values.
@@ -43,17 +36,10 @@ enum SdkType {
 /// Usage: xcrun [options] <tool name> ... arguments ...
 /// ...
 /// --sdk <sdk name>            find the tool for the given SDK name.
-String getNameForSdk(SdkType sdk) {
-  switch (sdk) {
-    case SdkType.iPhone:
-      return 'iphoneos';
-    case SdkType.iPhoneSimulator:
-      return 'iphonesimulator';
-    case SdkType.macOS:
-      return 'macosx';
-  }
-  assert(false);
-  return null;
+String getSDKNameForIOSEnvironmentType(EnvironmentType environmentType) {
+  return (environmentType == EnvironmentType.simulator)
+      ? 'iphonesimulator'
+      : 'iphoneos';
 }
 
 /// A utility class for interacting with Xcode command line tools.
@@ -82,15 +68,19 @@ class Xcode {
   final FileSystem _fileSystem;
   final XcodeProjectInterpreter _xcodeProjectInterpreter;
 
-  bool get isInstalledAndMeetsVersionCheck => _platform.isMacOS && isInstalled && isVersionSatisfactory;
+  bool get isInstalledAndMeetsVersionCheck =>
+      _platform.isMacOS && isInstalled && isRequiredVersionSatisfactory;
 
   String _xcodeSelectPath;
   String get xcodeSelectPath {
     if (_xcodeSelectPath == null) {
       try {
-        _xcodeSelectPath = _processUtils.runSync(
-          <String>['/usr/bin/xcode-select', '--print-path'],
-        ).stdout.trim();
+        _xcodeSelectPath = _processUtils
+            .runSync(
+              <String>['/usr/bin/xcode-select', '--print-path'],
+            )
+            .stdout
+            .trim();
       } on ProcessException {
         // Ignored, return null below.
       } on ArgumentError {
@@ -107,13 +97,18 @@ class Xcode {
     return _xcodeProjectInterpreter.isInstalled;
   }
 
-  int get majorVersion => _xcodeProjectInterpreter.majorVersion;
-  int get minorVersion => _xcodeProjectInterpreter.minorVersion;
-  int get patchVersion => _xcodeProjectInterpreter.patchVersion;
+  Version get currentVersion => Version(
+        _xcodeProjectInterpreter.majorVersion,
+        _xcodeProjectInterpreter.minorVersion,
+        _xcodeProjectInterpreter.patchVersion,
+        text:
+            '${_xcodeProjectInterpreter.majorVersion}.${_xcodeProjectInterpreter.minorVersion}.${_xcodeProjectInterpreter.patchVersion}',
+      );
 
   String get versionText => _xcodeProjectInterpreter.versionText;
 
   bool _eulaSigned;
+
   /// Has the EULA been signed?
   bool get eulaSigned {
     if (_eulaSigned == null) {
@@ -146,7 +141,7 @@ class Xcode {
         final RunResult result = _processUtils.runSync(
           <String>[...xcrunCommand(), 'simctl', 'list'],
         );
-        _isSimctlInstalled = result.stderr == null || result.stderr == '';
+        _isSimctlInstalled = result.exitCode == 0;
       } on ProcessException {
         _isSimctlInstalled = false;
       }
@@ -154,20 +149,18 @@ class Xcode {
     return _isSimctlInstalled;
   }
 
-  bool get isVersionSatisfactory {
+  bool get isRequiredVersionSatisfactory {
     if (!_xcodeProjectInterpreter.isInstalled) {
       return false;
     }
-    if (majorVersion > kXcodeRequiredVersionMajor) {
-      return true;
+    return currentVersion >= xcodeRequiredVersion;
+  }
+
+  bool get isRecommendedVersionSatisfactory {
+    if (!_xcodeProjectInterpreter.isInstalled) {
+      return false;
     }
-    if (majorVersion == kXcodeRequiredVersionMajor) {
-      if (minorVersion == kXcodeRequiredVersionMinor) {
-        return patchVersion >= kXcodeRequiredVersionPatch;
-      }
-      return minorVersion >= kXcodeRequiredVersionMinor;
-    }
-    return false;
+    return currentVersion >= xcodeRecommendedVersion;
   }
 
   /// The `xcrun` Xcode command to run or locate development
@@ -203,10 +196,15 @@ class Xcode {
     );
   }
 
-  Future<String> sdkLocation(SdkType sdk) async {
-    assert(sdk != null);
+  Future<String> sdkLocation(EnvironmentType environmentType) async {
+    assert(environmentType != null);
     final RunResult runResult = await _processUtils.run(
-      <String>[...xcrunCommand(), '--sdk', getNameForSdk(sdk), '--show-sdk-path'],
+      <String>[
+        ...xcrunCommand(),
+        '--sdk',
+        getNameForSdk(sdk),
+        '--show-sdk-path'
+      ],
     );
     if (runResult.exitCode != 0) {
       throwToolExit('Could not find SDK location: ${runResult.stderr}');
@@ -222,10 +220,23 @@ class Xcode {
       _fileSystem.path.join(xcodeSelectPath, 'Applications', 'Simulator.app'),
     ];
     return searchPaths.where((String p) => p != null).firstWhere(
-      (String p) => _fileSystem.directory(p).existsSync(),
-      orElse: () => null,
-    );
+          (String p) => _fileSystem.directory(p).existsSync(),
+          orElse: () => null,
+        );
   }
+}
+
+EnvironmentType environmentTypeFromSdkroot(Directory sdkroot) {
+  assert(sdkroot != null);
+  // iPhoneSimulator.sdk or iPhoneOS.sdk
+  final String sdkName = sdkroot.basename.toLowerCase();
+  if (sdkName.contains('iphone')) {
+    return sdkName.contains('simulator')
+        ? EnvironmentType.simulator
+        : EnvironmentType.physical;
+  }
+  assert(false);
+  return null;
 }
 
 enum XCDeviceEvent {
@@ -243,24 +254,24 @@ class XCDevice {
     @required Xcode xcode,
     @required Platform platform,
     @required IProxy iproxy,
-  }) : _processUtils = ProcessUtils(logger: logger, processManager: processManager),
-      _logger = logger,
-      _iMobileDevice = IMobileDevice(
-        artifacts: artifacts,
-        cache: cache,
-        logger: logger,
-        processManager: processManager,
-      ),
-      _iosDeploy = IOSDeploy(
-        artifacts: artifacts,
-        cache: cache,
-        logger: logger,
-        platform: platform,
-        processManager: processManager,
-      ),
-      _iProxy = iproxy,
-      _xcode = xcode {
-
+  })  : _processUtils =
+            ProcessUtils(logger: logger, processManager: processManager),
+        _logger = logger,
+        _iMobileDevice = IMobileDevice(
+          artifacts: artifacts,
+          cache: cache,
+          logger: logger,
+          processManager: processManager,
+        ),
+        _iosDeploy = IOSDeploy(
+          artifacts: artifacts,
+          cache: cache,
+          logger: logger,
+          platform: platform,
+          processManager: processManager,
+        ),
+        _iProxy = iproxy,
+        _xcode = xcode {
     _setupDeviceIdentifierByEventStream();
   }
 
@@ -282,7 +293,8 @@ class XCDevice {
   void _setupDeviceIdentifierByEventStream() {
     // _deviceIdentifierByEvent Should always be available for listeners
     // in case polling needs to be stopped and restarted.
-    _deviceIdentifierByEvent = StreamController<Map<XCDeviceEvent, String>>.broadcast(
+    _deviceIdentifierByEvent =
+        StreamController<Map<XCDeviceEvent, String>>.broadcast(
       onListen: _startObservingTetheredIOSDevices,
       onCancel: _stopObservingTetheredIOSDevices,
     );
@@ -290,12 +302,11 @@ class XCDevice {
 
   bool get isInstalled => _xcode.isInstalledAndMeetsVersionCheck;
 
-  Future<List<dynamic>> _getAllDevices({
-    bool useCache = false,
-    @required Duration timeout
-  }) async {
+  Future<List<dynamic>> _getAllDevices(
+      {bool useCache = false, @required Duration timeout}) async {
     if (!isInstalled) {
-      _logger.printTrace("Xcode not found. Run 'flutter doctor' for more information.");
+      _logger.printTrace(
+          "Xcode not found. Run 'flutter doctor' for more information.");
       return null;
     }
     if (useCache && _cachedListResults != null) {
@@ -314,15 +325,18 @@ class XCDevice {
         throwOnError: true,
       );
       if (result.exitCode == 0) {
-        final List<dynamic> listResults = json.decode(result.stdout) as List<dynamic>;
+        final List<dynamic> listResults =
+            json.decode(result.stdout) as List<dynamic>;
         _cachedListResults = listResults;
         return listResults;
       }
       _logger.printTrace('xcdevice returned an error:\n${result.stderr}');
     } on ProcessException catch (exception) {
-      _logger.printTrace('Process exception running xcdevice list:\n$exception');
+      _logger
+          .printTrace('Process exception running xcdevice list:\n$exception');
     } on ArgumentError catch (exception) {
-      _logger.printTrace('Argument exception running xcdevice list:\n$exception');
+      _logger
+          .printTrace('Argument exception running xcdevice list:\n$exception');
     }
 
     return null;
@@ -334,7 +348,8 @@ class XCDevice {
   /// and identifier.
   Stream<Map<XCDeviceEvent, String>> observedDeviceEvents() {
     if (!isInstalled) {
-      _logger.printTrace("Xcode not found. Run 'flutter doctor' for more information.");
+      _logger.printTrace(
+          "Xcode not found. Run 'flutter doctor' for more information.");
       return null;
     }
     return _deviceIdentifierByEvent.stream;
@@ -366,11 +381,11 @@ class XCDevice {
         ],
       );
 
-      final StreamSubscription<String> stdoutSubscription = _deviceObservationProcess.stdout
-        .transform<String>(utf8.decoder)
-        .transform<String>(const LineSplitter())
-        .listen((String line) {
-
+      final StreamSubscription<String> stdoutSubscription =
+          _deviceObservationProcess.stdout
+              .transform<String>(utf8.decoder)
+              .transform<String>(const LineSplitter())
+              .listen((String line) {
         // xcdevice observe example output of UDIDs:
         //
         // Listening for all devices, on both interfaces.
@@ -378,25 +393,25 @@ class XCDevice {
         // Attach: 00008027-00192736010F802E
         // Detach: d83d5bc53967baa0ee18626ba87b6254b2ab5418
         // Attach: d83d5bc53967baa0ee18626ba87b6254b2ab5418
-        final RegExpMatch match = _observationIdentifierPattern.firstMatch(line);
+        final RegExpMatch match =
+            _observationIdentifierPattern.firstMatch(line);
         if (match != null && match.groupCount == 2) {
           final String verb = match.group(1).toLowerCase();
           final String identifier = match.group(2);
           if (verb.startsWith('attach')) {
-            _deviceIdentifierByEvent.add(<XCDeviceEvent, String>{
-              XCDeviceEvent.attach: identifier
-            });
+            _deviceIdentifierByEvent
+                .add(<XCDeviceEvent, String>{XCDeviceEvent.attach: identifier});
           } else if (verb.startsWith('detach')) {
-            _deviceIdentifierByEvent.add(<XCDeviceEvent, String>{
-              XCDeviceEvent.detach: identifier
-            });
+            _deviceIdentifierByEvent
+                .add(<XCDeviceEvent, String>{XCDeviceEvent.detach: identifier});
           }
         }
       });
-      final StreamSubscription<String> stderrSubscription = _deviceObservationProcess.stderr
-        .transform<String>(utf8.decoder)
-        .transform<String>(const LineSplitter())
-        .listen((String line) {
+      final StreamSubscription<String> stderrSubscription =
+          _deviceObservationProcess.stderr
+              .transform<String>(utf8.decoder)
+              .transform<String>(const LineSplitter())
+              .listen((String line) {
         _logger.printTrace('xcdevice observe error: $line');
       });
       unawaited(_deviceObservationProcess.exitCode.then((int status) {
@@ -425,8 +440,9 @@ class XCDevice {
   }
 
   /// [timeout] defaults to 2 seconds.
-  Future<List<IOSDevice>> getAvailableIOSDevices({ Duration timeout }) async {
-    final List<dynamic> allAvailableDevices = await _getAllDevices(timeout: timeout ?? const Duration(seconds: 2));
+  Future<List<IOSDevice>> getAvailableIOSDevices({Duration timeout}) async {
+    final List<dynamic> allAvailableDevices =
+        await _getAllDevices(timeout: timeout ?? const Duration(seconds: 2));
 
     if (allAvailableDevices == null) {
       return const <IOSDevice>[];
@@ -474,18 +490,22 @@ class XCDevice {
       if (device is! Map) {
         continue;
       }
-      final Map<String, dynamic> deviceProperties = device as Map<String, dynamic>;
+      final Map<String, dynamic> deviceProperties =
+          device as Map<String, dynamic>;
 
       // Only include iPhone, iPad, iPod, or other iOS devices.
       if (!_isIPhoneOSDevice(deviceProperties)) {
         continue;
       }
 
-      final Map<String, dynamic> errorProperties = _errorProperties(deviceProperties);
+      final Map<String, dynamic> errorProperties =
+          _errorProperties(deviceProperties);
       if (errorProperties != null) {
         final String errorMessage = _parseErrorMessage(errorProperties);
         if (errorMessage.contains('not paired')) {
-          UsageEvent('device', 'ios-trust-failure', flutterUsage: globals.flutterUsage).send();
+          UsageEvent('device', 'ios-trust-failure',
+                  flutterUsage: globals.flutterUsage)
+              .send();
         }
         _logger.printTrace(errorMessage);
 
@@ -519,7 +539,6 @@ class XCDevice {
         iosDeploy: _iosDeploy,
         iMobileDevice: _iMobileDevice,
         platform: globals.platform,
-        vmServiceConnectUri: vm_service_io.vmServiceConnectUri,
       ));
     }
     return devices;
@@ -535,7 +554,8 @@ class XCDevice {
     return false;
   }
 
-  static Map<String, dynamic> _errorProperties(Map<String, dynamic> deviceProperties) {
+  static Map<String, dynamic> _errorProperties(
+      Map<String, dynamic> deviceProperties) {
     if (deviceProperties.containsKey('error')) {
       return deviceProperties['error'] as Map<String, dynamic>;
     }
@@ -549,11 +569,13 @@ class XCDevice {
     return null;
   }
 
-  static IOSDeviceInterface _interfaceType(Map<String, dynamic> deviceProperties) {
+  static IOSDeviceInterface _interfaceType(
+      Map<String, dynamic> deviceProperties) {
     // Interface can be "usb", "network", or "none" for simulators
     // and unknown future interfaces.
     if (deviceProperties.containsKey('interface')) {
-      if ((deviceProperties['interface'] as String).toLowerCase() == 'network') {
+      if ((deviceProperties['interface'] as String).toLowerCase() ==
+          'network') {
         return IOSDeviceInterface.network;
       } else {
         return IOSDeviceInterface.usb;
@@ -568,8 +590,11 @@ class XCDevice {
       // Parse out the OS version, ignore the build number in parentheses.
       // "13.3 (17C54)"
       final RegExp operatingSystemRegex = RegExp(r'(.*) \(.*\)$');
-      final String operatingSystemVersion = deviceProperties['operatingSystemVersion'] as String;
-      return operatingSystemRegex.firstMatch(operatingSystemVersion.trim())?.group(1);
+      final String operatingSystemVersion =
+          deviceProperties['operatingSystemVersion'] as String;
+      return operatingSystemRegex
+          .firstMatch(operatingSystemVersion.trim())
+          ?.group(1);
     }
     return null;
   }
@@ -588,7 +613,7 @@ class XCDevice {
         if (architecture.startsWith('armv7')) {
           cpuArchitecture = DarwinArch.armv7;
         } else {
-          cpuArchitecture = defaultIOSArchs.first;
+          cpuArchitecture = DarwinArch.arm64;
         }
         _logger.printError(
           'Unknown architecture $architecture, defaulting to '
@@ -666,7 +691,8 @@ class XCDevice {
     }
 
     if (errorProperties.containsKey('recoverySuggestion')) {
-      final String recoverySuggestion = errorProperties['recoverySuggestion'] as String;
+      final String recoverySuggestion =
+          errorProperties['recoverySuggestion'] as String;
       errorMessage.write(' $recoverySuggestion');
     }
 
@@ -681,9 +707,7 @@ class XCDevice {
   /// List of all devices reporting errors.
   Future<List<String>> getDiagnostics() async {
     final List<dynamic> allAvailableDevices = await _getAllDevices(
-      useCache: true,
-      timeout: const Duration(seconds: 2)
-    );
+        useCache: true, timeout: const Duration(seconds: 2));
 
     if (allAvailableDevices == null) {
       return const <String>[];
@@ -694,8 +718,10 @@ class XCDevice {
       if (device is! Map) {
         continue;
       }
-      final Map<String, dynamic> deviceProperties = device as Map<String, dynamic>;
-      final Map<String, dynamic> errorProperties = _errorProperties(deviceProperties);
+      final Map<String, dynamic> deviceProperties =
+          device as Map<String, dynamic>;
+      final Map<String, dynamic> errorProperties =
+          _errorProperties(deviceProperties);
       final String errorMessage = _parseErrorMessage(errorProperties);
       if (errorMessage != null) {
         diagnostics.add(errorMessage);

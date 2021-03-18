@@ -5,6 +5,7 @@
 import 'package:file/memory.dart';
 import 'package:file/src/interface/file.dart';
 import 'package:file_testing/file_testing.dart';
+import 'package:flutter_tools/src/base/common.dart';
 import 'package:flutter_tools/src/base/file_system.dart';
 import 'package:flutter_tools/src/base/io.dart';
 import 'package:flutter_tools/src/base/logger.dart';
@@ -17,11 +18,13 @@ import 'package:mockito/mockito.dart';
 import '../src/common.dart';
 import '../src/mocks.dart';
 
-final Platform testPlatform = FakePlatform(environment: <String, String>{});
+final Platform testPlatform =
+    FakePlatform(environment: const <String, String>{});
 
 void main() {
   testWithoutContext('ArtifactUpdater can download a zip archive', () async {
-    final MockOperatingSystemUtils operatingSystemUtils = MockOperatingSystemUtils();
+    final MockOperatingSystemUtils operatingSystemUtils =
+        MockOperatingSystemUtils();
     final MemoryFileSystem fileSystem = MemoryFileSystem.test();
     final BufferLogger logger = BufferLogger.test();
     final ArtifactUpdater artifactUpdater = ArtifactUpdater(
@@ -43,8 +46,11 @@ void main() {
     expect(fileSystem.file('out/test'), exists);
   });
 
-  testWithoutContext('ArtifactUpdater will restart the status ticker if it needs to retry the download', () async {
-    final MockOperatingSystemUtils operatingSystemUtils = MockOperatingSystemUtils();
+  testWithoutContext(
+      'ArtifactUpdater will restart the status ticker if it needs to retry the download',
+      () async {
+    final MockOperatingSystemUtils operatingSystemUtils =
+        MockOperatingSystemUtils();
     final MemoryFileSystem fileSystem = MemoryFileSystem.test();
     final Logger logger = StdoutLogger(
       terminal: Terminal.test(supportsColor: true),
@@ -71,8 +77,10 @@ void main() {
     expect(fileSystem.file('out/test'), exists);
   });
 
-  testWithoutContext('ArtifactUpdater will re-attempt on a non-200 response', () async {
-    final MockOperatingSystemUtils operatingSystemUtils = MockOperatingSystemUtils();
+  testWithoutContext('ArtifactUpdater will re-attempt on a non-200 response',
+      () async {
+    final MockOperatingSystemUtils operatingSystemUtils =
+        MockOperatingSystemUtils();
     final MemoryFileSystem fileSystem = MemoryFileSystem.test();
     final BufferLogger logger = BufferLogger.test();
     final MockHttpClient client = MockHttpClient();
@@ -87,19 +95,24 @@ void main() {
         ..createSync(),
     );
 
-    await expectLater(() async => await artifactUpdater.downloadZipArchive(
-      'test message',
-      Uri.parse('http:///test.zip'),
-      fileSystem.currentDirectory.childDirectory('out'),
-    ), throwsToolExit());
+    await expectLater(
+        () async => await artifactUpdater.downloadZipArchive(
+              'test message',
+              Uri.parse('http:///test.zip'),
+              fileSystem.currentDirectory.childDirectory('out'),
+            ),
+        throwsToolExit());
 
     expect(client.attempts, 2);
     expect(logger.statusText, contains('test message'));
     expect(fileSystem.file('out/test'), isNot(exists));
   });
 
-  testWithoutContext('ArtifactUpdater will tool exit on an ArgumentError from http client with base url override', () async {
-    final MockOperatingSystemUtils operatingSystemUtils = MockOperatingSystemUtils();
+  testWithoutContext(
+      'ArtifactUpdater will tool exit on an ArgumentError from http client with base url override',
+      () async {
+    final MockOperatingSystemUtils operatingSystemUtils =
+        MockOperatingSystemUtils();
     final MemoryFileSystem fileSystem = MemoryFileSystem.test();
     final BufferLogger logger = BufferLogger.test();
     final MockHttpClient client = MockHttpClient();
@@ -109,28 +122,31 @@ void main() {
       logger: logger,
       operatingSystemUtils: operatingSystemUtils,
       platform: FakePlatform(
-        environment: <String, String>{
-          'FLUTTER_STORAGE_BASE_URL': 'foo-bar'
-        },
+        environment: <String, String>{'FLUTTER_STORAGE_BASE_URL': 'foo-bar'},
       ),
       httpClient: client,
       tempStorage: fileSystem.currentDirectory.childDirectory('temp')
         ..createSync(),
     );
 
-    await expectLater(() async => await artifactUpdater.downloadZipArchive(
-      'test message',
-      Uri.parse('http:///foo-bar/test.zip'),
-      fileSystem.currentDirectory.childDirectory('out'),
-    ), throwsToolExit());
+    await expectLater(
+        () async => await artifactUpdater.downloadZipArchive(
+              'test message',
+              Uri.parse('http:///foo-bar/test.zip'),
+              fileSystem.currentDirectory.childDirectory('out'),
+            ),
+        throwsToolExit());
 
     expect(client.attempts, 1);
     expect(logger.statusText, contains('test message'));
     expect(fileSystem.file('out/test'), isNot(exists));
   });
 
-  testWithoutContext('ArtifactUpdater will rethrow on an ArgumentError from http client without base url override', () async {
-    final MockOperatingSystemUtils operatingSystemUtils = MockOperatingSystemUtils();
+  testWithoutContext(
+      'ArtifactUpdater will rethrow on an ArgumentError from http client without base url override',
+      () async {
+    final MockOperatingSystemUtils operatingSystemUtils =
+        MockOperatingSystemUtils();
     final MemoryFileSystem fileSystem = MemoryFileSystem.test();
     final BufferLogger logger = BufferLogger.test();
     final MockHttpClient client = MockHttpClient();
@@ -145,19 +161,23 @@ void main() {
         ..createSync(),
     );
 
-    await expectLater(() async => await artifactUpdater.downloadZipArchive(
-      'test message',
-      Uri.parse('http:///test.zip'),
-      fileSystem.currentDirectory.childDirectory('out'),
-    ), throwsA(isA<ArgumentError>()));
+    await expectLater(
+        () async => await artifactUpdater.downloadZipArchive(
+              'test message',
+              Uri.parse('http:///test.zip'),
+              fileSystem.currentDirectory.childDirectory('out'),
+            ),
+        throwsA(isA<ArgumentError>()));
 
     expect(client.attempts, 1);
     expect(logger.statusText, contains('test message'));
     expect(fileSystem.file('out/test'), isNot(exists));
   });
 
-  testWithoutContext('ArtifactUpdater will de-download a file if unzipping fails', () async {
-    final MockOperatingSystemUtils operatingSystemUtils = MockOperatingSystemUtils();
+  testWithoutContext(
+      'ArtifactUpdater will re-download a file if unzipping fails', () async {
+    final MockOperatingSystemUtils operatingSystemUtils =
+        MockOperatingSystemUtils();
     final MemoryFileSystem fileSystem = MemoryFileSystem.test();
     final BufferLogger logger = BufferLogger.test();
     final ArtifactUpdater artifactUpdater = ArtifactUpdater(
@@ -180,8 +200,38 @@ void main() {
     expect(fileSystem.file('out/test'), exists);
   });
 
-  testWithoutContext('ArtifactUpdater will bail if unzipping fails more than twice', () async {
-    final MockOperatingSystemUtils operatingSystemUtils = MockOperatingSystemUtils();
+  testWithoutContext(
+      'ArtifactUpdater will de-download a file if unzipping fails on windows',
+      () async {
+    final MockOperatingSystemUtils operatingSystemUtils =
+        MockOperatingSystemUtils(windows: true);
+    final MemoryFileSystem fileSystem = MemoryFileSystem.test();
+    final BufferLogger logger = BufferLogger.test();
+    final ArtifactUpdater artifactUpdater = ArtifactUpdater(
+      fileSystem: fileSystem,
+      logger: logger,
+      operatingSystemUtils: operatingSystemUtils,
+      platform: testPlatform,
+      httpClient: MockHttpClient(),
+      tempStorage: fileSystem.currentDirectory.childDirectory('temp')
+        ..createSync(),
+    );
+    operatingSystemUtils.failures = 1;
+
+    await artifactUpdater.downloadZipArchive(
+      'test message',
+      Uri.parse('http:///test.zip'),
+      fileSystem.currentDirectory.childDirectory('out'),
+    );
+    expect(logger.statusText, contains('test message'));
+    expect(fileSystem.file('out/test'), exists);
+  });
+
+  testWithoutContext(
+      'ArtifactUpdater will bail with a tool exit if unzipping fails more than twice',
+      () async {
+    final MockOperatingSystemUtils operatingSystemUtils =
+        MockOperatingSystemUtils();
     final MemoryFileSystem fileSystem = MemoryFileSystem.test();
     final BufferLogger logger = BufferLogger.test();
     final ArtifactUpdater artifactUpdater = ArtifactUpdater(
@@ -195,17 +245,49 @@ void main() {
     );
     operatingSystemUtils.failures = 2;
 
-    expect(artifactUpdater.downloadZipArchive(
-      'test message',
-      Uri.parse('http:///test.zip'),
-      fileSystem.currentDirectory.childDirectory('out'),
-    ), throwsA(isA<ProcessException>()));
+    expect(
+        artifactUpdater.downloadZipArchive(
+          'test message',
+          Uri.parse('http:///test.zip'),
+          fileSystem.currentDirectory.childDirectory('out'),
+        ),
+        throwsA(isA<ToolExit>()));
+    expect(fileSystem.file('te,[/test'), isNot(exists));
+    expect(fileSystem.file('out/test'), isNot(exists));
+  });
+
+  testWithoutContext(
+      'ArtifactUpdater will bail if unzipping fails more than twice on Windows',
+      () async {
+    final MockOperatingSystemUtils operatingSystemUtils =
+        MockOperatingSystemUtils(windows: true);
+    final MemoryFileSystem fileSystem = MemoryFileSystem.test();
+    final BufferLogger logger = BufferLogger.test();
+    final ArtifactUpdater artifactUpdater = ArtifactUpdater(
+      fileSystem: fileSystem,
+      logger: logger,
+      operatingSystemUtils: operatingSystemUtils,
+      platform: testPlatform,
+      httpClient: MockHttpClient(),
+      tempStorage: fileSystem.currentDirectory.childDirectory('temp')
+        ..createSync(),
+    );
+    operatingSystemUtils.failures = 2;
+
+    expect(
+        artifactUpdater.downloadZipArchive(
+          'test message',
+          Uri.parse('http:///test.zip'),
+          fileSystem.currentDirectory.childDirectory('out'),
+        ),
+        throwsA(isA<ToolExit>()));
     expect(fileSystem.file('te,[/test'), isNot(exists));
     expect(fileSystem.file('out/test'), isNot(exists));
   });
 
   testWithoutContext('ArtifactUpdater can download a tar archive', () async {
-    final MockOperatingSystemUtils operatingSystemUtils = MockOperatingSystemUtils();
+    final MockOperatingSystemUtils operatingSystemUtils =
+        MockOperatingSystemUtils();
     final MemoryFileSystem fileSystem = MemoryFileSystem.test();
     final BufferLogger logger = BufferLogger.test();
     final ArtifactUpdater artifactUpdater = ArtifactUpdater(
@@ -226,8 +308,10 @@ void main() {
     expect(fileSystem.file('out/test'), exists);
   });
 
-  testWithoutContext('ArtifactUpdater will delete downloaded files if they exist.', () async {
-    final MockOperatingSystemUtils operatingSystemUtils = MockOperatingSystemUtils();
+  testWithoutContext(
+      'ArtifactUpdater will delete downloaded files if they exist.', () async {
+    final MockOperatingSystemUtils operatingSystemUtils =
+        MockOperatingSystemUtils();
     final MemoryFileSystem fileSystem = MemoryFileSystem.test();
     final BufferLogger logger = BufferLogger.test();
     final ArtifactUpdater artifactUpdater = ArtifactUpdater(
@@ -253,26 +337,32 @@ void main() {
 }
 
 class MockOperatingSystemUtils extends Mock implements OperatingSystemUtils {
+  MockOperatingSystemUtils({this.windows = false});
+
   int failures = 0;
+  final bool windows;
 
   @override
   void unzip(File file, Directory targetDirectory) {
     if (failures > 0) {
       failures -= 1;
-      throw const ProcessException('zip', <String>[], 'Failed to unzip');
+      throw Exception();
     }
-    targetDirectory.childFile(file.fileSystem.path.basenameWithoutExtension(file.path))
-      .createSync();
+    targetDirectory
+        .childFile(file.fileSystem.path.basenameWithoutExtension(file.path))
+        .createSync();
   }
 
   @override
   void unpack(File gzippedTarFile, Directory targetDirectory) {
     if (failures > 0) {
       failures -= 1;
-      throw const ProcessException('zip', <String>[], 'Failed to unzip');
+      throw Exception();
     }
-    targetDirectory.childFile(gzippedTarFile.fileSystem.path.basenameWithoutExtension(gzippedTarFile.path))
-      .createSync();
+    targetDirectory
+        .childFile(gzippedTarFile.fileSystem.path
+            .basenameWithoutExtension(gzippedTarFile.path))
+        .createSync();
   }
 }
 
@@ -295,6 +385,7 @@ class MockHttpClient extends Mock implements HttpClient {
     return testRequest;
   }
 }
+
 class MockHttpClientRequest extends Mock implements HttpClientRequest {
   final MockHttpClientResponse testResponse = MockHttpClientResponse();
 
@@ -303,12 +394,28 @@ class MockHttpClientRequest extends Mock implements HttpClientRequest {
     return testResponse;
   }
 }
+
 class MockHttpClientResponse extends Mock implements HttpClientResponse {
   @override
   int statusCode = HttpStatus.ok;
 
   @override
+  HttpHeaders headers = FakeHttpHeaders(<String, List<String>>{});
+
+  @override
   Future<void> forEach(void Function(List<int> element) action) async {
+    action(<int>[0]);
     return;
+  }
+}
+
+class FakeHttpHeaders extends Fake implements HttpHeaders {
+  FakeHttpHeaders(this.values);
+
+  final Map<String, List<String>> values;
+
+  @override
+  List<String> operator [](String key) {
+    return values[key];
   }
 }

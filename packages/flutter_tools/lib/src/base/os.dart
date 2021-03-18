@@ -52,14 +52,14 @@ abstract class OperatingSystemUtils {
     @required Logger logger,
     @required Platform platform,
     @required ProcessManager processManager,
-  }) : _fileSystem = fileSystem,
-       _logger = logger,
-       _platform = platform,
-       _processManager = processManager,
-       _processUtils = ProcessUtils(
-        logger: logger,
-        processManager: processManager,
-      );
+  })  : _fileSystem = fileSystem,
+        _logger = logger,
+        _platform = platform,
+        _processManager = processManager,
+        _processUtils = ProcessUtils(
+          logger: logger,
+          processManager: processManager,
+        );
 
   @visibleForTesting
   static final GZipCodec gzipLevel1 = GZipCodec(level: 1);
@@ -98,8 +98,6 @@ abstract class OperatingSystemUtils {
   /// Return the File representing a new pipe.
   File makePipe(String path);
 
-  void zip(Directory data, File zipFile);
-
   void unzip(File file, Directory targetDirectory);
 
   void unpack(File gzippedTarFile, Directory targetDirectory);
@@ -124,7 +122,7 @@ abstract class OperatingSystemUtils {
 
   HostPlatform get hostPlatform;
 
-  List<File> _which(String execName, { bool all = false });
+  List<File> _which(String execName, {bool all = false});
 
   /// Returns the separator between items in the PATH environment variable.
   String get pathVarSeparator;
@@ -168,11 +166,11 @@ class _PosixUtils extends OperatingSystemUtils {
     @required Platform platform,
     @required ProcessManager processManager,
   }) : super._private(
-    fileSystem: fileSystem,
-    logger: logger,
-    platform: platform,
-    processManager: processManager,
-  );
+          fileSystem: fileSystem,
+          logger: logger,
+          platform: platform,
+          processManager: processManager,
+        );
 
   @override
   void makeExecutable(File file) {
@@ -200,7 +198,7 @@ class _PosixUtils extends OperatingSystemUtils {
   }
 
   @override
-  List<File> _which(String execName, { bool all = false }) {
+  List<File> _which(String execName, {bool all = false}) {
     final List<String> command = <String>[
       'which',
       if (all) '-a',
@@ -211,28 +209,36 @@ class _PosixUtils extends OperatingSystemUtils {
       return const <File>[];
     }
     final String stdout = result.stdout as String;
-    return stdout.trim().split('\n').map<File>(
-      (String path) => _fileSystem.file(path.trim()),
-    ).toList();
-  }
-
-  @override
-  void zip(Directory data, File zipFile) {
-    _processUtils.runSync(
-      <String>['zip', '-r', '-q', zipFile.path, '.'],
-      workingDirectory: data.path,
-      throwOnError: true,
-    );
+    return stdout
+        .trim()
+        .split('\n')
+        .map<File>(
+          (String path) => _fileSystem.file(path.trim()),
+        )
+        .toList();
   }
 
   // unzip -o -q zipfile -d dest
   @override
   void unzip(File file, Directory targetDirectory) {
-    _processUtils.runSync(
-      <String>['unzip', '-o', '-q', file.path, '-d', targetDirectory.path],
-      throwOnError: true,
-      verboseExceptions: true,
-    );
+    try {
+      _processUtils.runSync(
+        <String>['unzip', '-o', '-q', file.path, '-d', targetDirectory.path],
+        throwOnError: true,
+        verboseExceptions: true,
+      );
+    } on ArgumentError {
+      // unzip is not available. this error message is modeled after the download
+      // error in bin/internal/update_dart_sdk.sh
+      String message = 'Please install unzip.';
+      if (_platform.isMacOS) {
+        message = 'Consider running "brew install unzip".';
+      } else if (_platform.isLinux) {
+        message = 'Consider running "sudo apt-get install unzip".';
+      }
+      throwToolExit(
+          'Missing "unzip" tool. Unable to extract ${file.path}.\n$message');
+    }
   }
 
   // tar -xzf tarball -C dest
@@ -319,11 +325,11 @@ class _WindowsUtils extends OperatingSystemUtils {
     @required Platform platform,
     @required ProcessManager processManager,
   }) : super._private(
-    fileSystem: fileSystem,
-    logger: logger,
-    platform: platform,
-    processManager: processManager,
-  );
+          fileSystem: fileSystem,
+          logger: logger,
+          platform: platform,
+          processManager: processManager,
+        );
 
   @override
   HostPlatform hostPlatform = HostPlatform.windows_x64;
@@ -335,7 +341,7 @@ class _WindowsUtils extends OperatingSystemUtils {
   void chmod(FileSystemEntity entity, String mode) {}
 
   @override
-  List<File> _which(String execName, { bool all = false }) {
+  List<File> _which(String execName, {bool all = false}) {
     // `where` always returns all matches, not just the first one.
     ProcessResult result;
     try {
@@ -343,35 +349,21 @@ class _WindowsUtils extends OperatingSystemUtils {
     } on ArgumentError {
       // `where` could be missing if system32 is not on the PATH.
       throwToolExit(
-        'Cannot find the executable for `where`. This can happen if the System32 '
-        'folder (e.g. C:\\Windows\\System32 ) is removed from the PATH environment '
-        'variable. Ensure that this is present and then try again after restarting '
-        'the terminal and/or IDE.'
-      );
+          'Cannot find the executable for `where`. This can happen if the System32 '
+          r'folder (e.g. C:\Windows\System32 ) is removed from the PATH environment '
+          'variable. Ensure that this is present and then try again after restarting '
+          'the terminal and/or IDE.');
     }
     if (result.exitCode != 0) {
       return const <File>[];
     }
     final List<String> lines = (result.stdout as String).trim().split('\n');
     if (all) {
-      return lines.map<File>((String path) => _fileSystem.file(path.trim())).toList();
+      return lines
+          .map<File>((String path) => _fileSystem.file(path.trim()))
+          .toList();
     }
     return <File>[_fileSystem.file(lines.first.trim())];
-  }
-
-  @override
-  void zip(Directory data, File zipFile) {
-    final Archive archive = Archive();
-    for (final FileSystemEntity entity in data.listSync(recursive: true)) {
-      if (entity is! File) {
-        continue;
-      }
-      final File file = entity as File;
-      final String path = file.fileSystem.path.relative(file.path, from: data.path);
-      final List<int> bytes = file.readAsBytesSync();
-      archive.addFile(ArchiveFile(path, bytes.length, bytes));
-    }
-    zipFile.writeAsBytesSync(ZipEncoder().encode(archive), flush: true);
   }
 
   @override
@@ -416,8 +408,8 @@ class _WindowsUtils extends OperatingSystemUtils {
   @override
   String get name {
     if (_name == null) {
-      final ProcessResult result = _processManager.runSync(
-          <String>['ver'], runInShell: true);
+      final ProcessResult result =
+          _processManager.runSync(<String>['ver'], runInShell: true);
       if (result.exitCode == 0) {
         _name = (result.stdout as String).trim();
       } else {
@@ -435,11 +427,12 @@ class _WindowsUtils extends OperatingSystemUtils {
 /// directory or the current working directory if none specified.
 /// Return null if the project root could not be found
 /// or if the project root is the flutter repository root.
-String findProjectRoot([ String directory ]) {
+String findProjectRoot([String directory]) {
   const String kProjectRootSentinel = 'pubspec.yaml';
   directory ??= globals.fs.currentDirectory.path;
   while (true) {
-    if (globals.fs.isFileSync(globals.fs.path.join(directory, kProjectRootSentinel))) {
+    if (globals.fs
+        .isFileSync(globals.fs.path.join(directory, kProjectRootSentinel))) {
       return directory;
     }
     final String parent = globals.fs.path.dirname(directory);

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart = 2.8
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -12,27 +10,24 @@ import 'package:flutter/services.dart';
 void main() {
   testWidgets('Heroes work', (WidgetTester tester) async {
     await tester.pumpWidget(CupertinoApp(
-      home:
-        ListView(
-          children: <Widget>[
-            const Hero(tag: 'a', child: Text('foo')),
-            Builder(builder: (BuildContext context) {
-              return CupertinoButton(
-                child: const Text('next'),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    CupertinoPageRoute<void>(
-                      builder: (BuildContext context) {
-                        return const Hero(tag: 'a', child: Text('foo'));
-                      }
-                    ),
-                  );
-                },
-              );
-            }),
-          ],
-        ),
+      home: ListView(
+        children: <Widget>[
+          const Hero(tag: 'a', child: Text('foo')),
+          Builder(builder: (BuildContext context) {
+            return CupertinoButton(
+              child: const Text('next'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  CupertinoPageRoute<void>(builder: (BuildContext context) {
+                    return const Hero(tag: 'a', child: Text('foo'));
+                  }),
+                );
+              },
+            );
+          }),
+        ],
+      ),
     ));
 
     await tester.tap(find.text('next'));
@@ -45,7 +40,8 @@ void main() {
     expect(find.widgetWithText(Navigator, 'foo'), findsOneWidget);
   });
 
-  testWidgets('Has default cupertino localizations', (WidgetTester tester) async {
+  testWidgets('Has default cupertino localizations',
+      (WidgetTester tester) async {
     await tester.pumpWidget(
       CupertinoApp(
         home: Builder(
@@ -68,7 +64,8 @@ void main() {
   });
 
   testWidgets('Can use dynamic color', (WidgetTester tester) async {
-    const CupertinoDynamicColor dynamicColor = CupertinoDynamicColor.withBrightness(
+    const CupertinoDynamicColor dynamicColor =
+        CupertinoDynamicColor.withBrightness(
       color: Color(0xFF000000),
       darkColor: Color(0xFF000001),
     );
@@ -91,42 +88,34 @@ void main() {
 
   testWidgets('Can customize initial routes', (WidgetTester tester) async {
     final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-    await tester.pumpWidget(
-      CupertinoApp(
-        navigatorKey: navigatorKey,
-        onGenerateInitialRoutes: (String initialRoute) {
-          expect(initialRoute, '/abc');
-          return <Route<void>>[
-            PageRouteBuilder<void>(
-              pageBuilder: (
-                BuildContext context,
-                Animation<double> animation,
-                Animation<double> secondaryAnimation) {
-                return const Text('non-regular page one');
-              }
-            ),
-            PageRouteBuilder<void>(
-              pageBuilder: (
-                BuildContext context,
-                Animation<double> animation,
-                Animation<double> secondaryAnimation) {
-                return const Text('non-regular page two');
-              }
-            ),
-          ];
-        },
-        initialRoute: '/abc',
-        routes: <String, WidgetBuilder>{
-          '/': (BuildContext context) => const Text('regular page one'),
-          '/abc': (BuildContext context) => const Text('regular page two'),
-        },
-      )
-    );
+    await tester.pumpWidget(CupertinoApp(
+      navigatorKey: navigatorKey,
+      onGenerateInitialRoutes: (String initialRoute) {
+        expect(initialRoute, '/abc');
+        return <Route<void>>[
+          PageRouteBuilder<void>(pageBuilder: (BuildContext context,
+              Animation<double> animation,
+              Animation<double> secondaryAnimation) {
+            return const Text('non-regular page one');
+          }),
+          PageRouteBuilder<void>(pageBuilder: (BuildContext context,
+              Animation<double> animation,
+              Animation<double> secondaryAnimation) {
+            return const Text('non-regular page two');
+          }),
+        ];
+      },
+      initialRoute: '/abc',
+      routes: <String, WidgetBuilder>{
+        '/': (BuildContext context) => const Text('regular page one'),
+        '/abc': (BuildContext context) => const Text('regular page two'),
+      },
+    ));
     expect(find.text('non-regular page two'), findsOneWidget);
     expect(find.text('non-regular page one'), findsNothing);
     expect(find.text('regular page one'), findsNothing);
     expect(find.text('regular page two'), findsNothing);
-    navigatorKey.currentState.pop();
+    navigatorKey.currentState!.pop();
     await tester.pumpAndSettle();
     expect(find.text('non-regular page two'), findsNothing);
     expect(find.text('non-regular page one'), findsOneWidget);
@@ -134,7 +123,8 @@ void main() {
     expect(find.text('regular page two'), findsNothing);
   });
 
-  testWidgets('CupertinoApp.navigatorKey can be updated', (WidgetTester tester) async {
+  testWidgets('CupertinoApp.navigatorKey can be updated',
+      (WidgetTester tester) async {
     final GlobalKey<NavigatorState> key1 = GlobalKey<NavigatorState>();
     await tester.pumpWidget(CupertinoApp(
       navigatorKey: key1,
@@ -151,22 +141,23 @@ void main() {
   });
 
   testWidgets('CupertinoApp.router works', (WidgetTester tester) async {
-    final PlatformRouteInformationProvider provider = PlatformRouteInformationProvider(
+    final PlatformRouteInformationProvider provider =
+        PlatformRouteInformationProvider(
       initialRouteInformation: const RouteInformation(
         location: 'initial',
       ),
     );
-    final SimpleNavigatorRouterDelegate delegate = SimpleNavigatorRouterDelegate(
-      builder: (BuildContext context, RouteInformation information) {
-        return Text(information.location);
-      },
-      onPopPage: (Route<void> route, void result, SimpleNavigatorRouterDelegate delegate) {
-        delegate.routeInformation = const RouteInformation(
-          location: 'popped',
-        );
-        return route.didPop(result);
-      }
-    );
+    final SimpleNavigatorRouterDelegate delegate =
+        SimpleNavigatorRouterDelegate(
+            builder: (BuildContext context, RouteInformation information) {
+      return Text(information.location!);
+    }, onPopPage: (Route<void> route, void result,
+                SimpleNavigatorRouterDelegate delegate) {
+      delegate.routeInformation = const RouteInformation(
+        location: 'popped',
+      );
+      return route.didPop(result);
+    });
     await tester.pumpWidget(CupertinoApp.router(
       routeInformationProvider: provider,
       routeInformationParser: SimpleRouteInformationParser(),
@@ -175,17 +166,22 @@ void main() {
     expect(find.text('initial'), findsOneWidget);
 
     // Simulate android back button intent.
-    final ByteData message = const JSONMethodCodec().encodeMethodCall(const MethodCall('popRoute'));
-    await ServicesBinding.instance.defaultBinaryMessenger.handlePlatformMessage('flutter/navigation', message, (_) { });
+    final ByteData message =
+        const JSONMethodCodec().encodeMethodCall(const MethodCall('popRoute'));
+    await ServicesBinding.instance!.defaultBinaryMessenger
+        .handlePlatformMessage('flutter/navigation', message, (_) {});
     await tester.pumpAndSettle();
     expect(find.text('popped'), findsOneWidget);
   });
 }
 
-typedef SimpleRouterDelegateBuilder = Widget Function(BuildContext, RouteInformation);
-typedef SimpleNavigatorRouterDelegatePopPage<T> = bool Function(Route<T> route, T result, SimpleNavigatorRouterDelegate delegate);
+typedef SimpleRouterDelegateBuilder = Widget Function(
+    BuildContext, RouteInformation);
+typedef SimpleNavigatorRouterDelegatePopPage<T> = bool Function(
+    Route<T> route, T result, SimpleNavigatorRouterDelegate delegate);
 
-class SimpleRouteInformationParser extends RouteInformationParser<RouteInformation> {
+class SimpleRouteInformationParser
+    extends RouteInformationParser<RouteInformation> {
   SimpleRouteInformationParser();
 
   @override
@@ -199,9 +195,10 @@ class SimpleRouteInformationParser extends RouteInformationParser<RouteInformati
   }
 }
 
-class SimpleNavigatorRouterDelegate extends RouterDelegate<RouteInformation> with PopNavigatorRouterDelegateMixin<RouteInformation>, ChangeNotifier {
+class SimpleNavigatorRouterDelegate extends RouterDelegate<RouteInformation>
+    with PopNavigatorRouterDelegateMixin<RouteInformation>, ChangeNotifier {
   SimpleNavigatorRouterDelegate({
-    @required this.builder,
+    required this.builder,
     this.onPopPage,
   });
 
@@ -209,14 +206,14 @@ class SimpleNavigatorRouterDelegate extends RouterDelegate<RouteInformation> wit
   GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   RouteInformation get routeInformation => _routeInformation;
-  RouteInformation _routeInformation;
+  late RouteInformation _routeInformation;
   set routeInformation(RouteInformation newValue) {
     _routeInformation = newValue;
     notifyListeners();
   }
 
   SimpleRouterDelegateBuilder builder;
-  SimpleNavigatorRouterDelegatePopPage<void> onPopPage;
+  SimpleNavigatorRouterDelegatePopPage<void>? onPopPage;
 
   @override
   Future<void> setNewRoutePath(RouteInformation configuration) {
@@ -225,7 +222,7 @@ class SimpleNavigatorRouterDelegate extends RouterDelegate<RouteInformation> wit
   }
 
   bool _handlePopPage(Route<void> route, void data) {
-    return onPopPage(route, data, this);
+    return onPopPage!(route, data, this);
   }
 
   @override
@@ -237,7 +234,7 @@ class SimpleNavigatorRouterDelegate extends RouterDelegate<RouteInformation> wit
         // We need at least two pages for the pop to propagate through.
         // Otherwise, the navigator will bubble the pop to the system navigator.
         const CupertinoPage<void>(
-          child:  Text('base'),
+          child: Text('base'),
         ),
         CupertinoPage<void>(
           key: ValueKey<String>(routeInformation?.location),

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart = 2.8
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -98,7 +96,8 @@ void main() {
         },
       ),
     );
-    await tester.pump(); // to load the localization, since it doesn't use a synchronous future
+    await tester
+        .pump(); // to load the localization, since it doesn't use a synchronous future
 
     final Offset widget1InitialTopLeft = tester.getTopLeft(find.text('Page 1'));
 
@@ -152,7 +151,8 @@ void main() {
     expect(widget1InitialTopLeft, equals(widget1TransientTopLeft));
   });
 
-  testWidgets('test iOS fullscreen dialog transition', (WidgetTester tester) async {
+  testWidgets('test iOS fullscreen dialog transition',
+      (WidgetTester tester) async {
     await tester.pumpWidget(
       const CupertinoApp(
         home: Center(child: Text('Page 1')),
@@ -161,12 +161,14 @@ void main() {
 
     final Offset widget1InitialTopLeft = tester.getTopLeft(find.text('Page 1'));
 
-    tester.state<NavigatorState>(find.byType(Navigator)).push(CupertinoPageRoute<void>(
-      builder: (BuildContext context) {
-        return const Center(child: Text('Page 2'));
-      },
-      fullscreenDialog: true,
-    ));
+    tester
+        .state<NavigatorState>(find.byType(Navigator))
+        .push(CupertinoPageRoute<void>(
+          builder: (BuildContext context) {
+            return const Center(child: Text('Page 2'));
+          },
+          fullscreenDialog: true,
+        ));
 
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
@@ -273,13 +275,14 @@ void main() {
     expect(find.text('Page 2'), isOnstage);
   });
 
-  testWidgets('test edge swipes work with media query padding (LTR)', (WidgetTester tester) async {
+  testWidgets('test edge swipes work with media query padding (LTR)',
+      (WidgetTester tester) async {
     await tester.pumpWidget(
       CupertinoApp(
-        builder: (BuildContext context, Widget navigator) {
+        builder: (BuildContext context, Widget? navigator) {
           return MediaQuery(
             data: const MediaQueryData(padding: EdgeInsets.only(left: 40)),
-            child: navigator,
+            child: navigator!,
           );
         },
         home: const Placeholder(),
@@ -287,19 +290,21 @@ void main() {
     );
 
     tester.state<NavigatorState>(find.byType(Navigator)).push(
-      CupertinoPageRoute<void>(
-        builder: (BuildContext context) => const Center(child: Text('Page 1')),
-      ),
-    );
+          CupertinoPageRoute<void>(
+            builder: (BuildContext context) =>
+                const Center(child: Text('Page 1')),
+          ),
+        );
 
     await tester.pump();
     await tester.pump(const Duration(seconds: 2));
 
     tester.state<NavigatorState>(find.byType(Navigator)).push(
-      CupertinoPageRoute<void>(
-        builder: (BuildContext context) => const Center(child: Text('Page 2')),
-      ),
-    );
+          CupertinoPageRoute<void>(
+            builder: (BuildContext context) =>
+                const Center(child: Text('Page 2')),
+          ),
+        );
     await tester.pump();
     await tester.pumpAndSettle();
 
@@ -307,7 +312,8 @@ void main() {
     expect(find.text('Page 2'), isOnstage);
 
     // Now drag from the left edge.
-    final TestGesture gesture = await tester.startGesture(const Offset(35.0, 200.0));
+    final TestGesture gesture =
+        await tester.startGesture(const Offset(35.0, 200.0));
     await gesture.moveBy(const Offset(300.0, 0.0));
     await tester.pump();
     await tester.pumpAndSettle();
@@ -317,15 +323,16 @@ void main() {
     expect(find.text('Page 2'), isOnstage);
   });
 
-  testWidgets('test edge swipes work with media query padding (RLT)', (WidgetTester tester) async {
+  testWidgets('test edge swipes work with media query padding (RLT)',
+      (WidgetTester tester) async {
     await tester.pumpWidget(
       CupertinoApp(
-        builder: (BuildContext context, Widget navigator) {
+        builder: (BuildContext context, Widget? navigator) {
           return Directionality(
             textDirection: TextDirection.rtl,
             child: MediaQuery(
               data: const MediaQueryData(padding: EdgeInsets.only(right: 40)),
-              child: navigator,
+              child: navigator!,
             ),
           );
         },
@@ -334,19 +341,21 @@ void main() {
     );
 
     tester.state<NavigatorState>(find.byType(Navigator)).push(
-      CupertinoPageRoute<void>(
-        builder: (BuildContext context) => const Center(child: Text('Page 1')),
-      ),
-    );
+          CupertinoPageRoute<void>(
+            builder: (BuildContext context) =>
+                const Center(child: Text('Page 1')),
+          ),
+        );
 
     await tester.pump();
     await tester.pumpAndSettle();
 
     tester.state<NavigatorState>(find.byType(Navigator)).push(
-      CupertinoPageRoute<void>(
-        builder: (BuildContext context) => const Center(child: Text('Page 2')),
-      ),
-    );
+          CupertinoPageRoute<void>(
+            builder: (BuildContext context) =>
+                const Center(child: Text('Page 2')),
+          ),
+        );
 
     await tester.pump();
     await tester.pumpAndSettle();
@@ -355,7 +364,8 @@ void main() {
     expect(find.text('Page 2'), isOnstage);
 
     // Now drag from the left edge.
-    final TestGesture gesture = await tester.startGesture(const Offset(765.0, 200.0));
+    final TestGesture gesture =
+        await tester.startGesture(const Offset(765.0, 200.0));
     await gesture.moveBy(const Offset(-300.0, 0.0));
     await tester.pump();
     await tester.pumpAndSettle();
@@ -382,7 +392,8 @@ void main() {
         },
       ),
     );
-    await tester.pump(); // to load the localization, since it doesn't use a synchronous future
+    await tester
+        .pump(); // to load the localization, since it doesn't use a synchronous future
 
     tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/next');
 
@@ -430,7 +441,8 @@ void main() {
     expect(find.text('Page 2'), isOnstage);
   });
 
-  testWidgets('test edge swipe then drop back at starting point works', (WidgetTester tester) async {
+  testWidgets('test edge swipe then drop back at starting point works',
+      (WidgetTester tester) async {
     await tester.pumpWidget(
       CupertinoApp(
         onGenerateRoute: (RouteSettings settings) {
@@ -465,7 +477,8 @@ void main() {
     expect(find.text('Page 2'), isOnstage);
   });
 
-  testWidgets('CupertinoPage does not lose its state when transitioning out', (WidgetTester tester) async {
+  testWidgets('CupertinoPage does not lose its state when transitioning out',
+      (WidgetTester tester) async {
     final GlobalKey<NavigatorState> navigator = GlobalKey<NavigatorState>();
     await tester.pumpWidget(KeepsStateTestWidget(navigatorKey: navigator));
     expect(find.text('subpage'), findsOneWidget);
@@ -479,14 +492,17 @@ void main() {
   });
 }
 
-class RtlOverrideWidgetsDelegate extends LocalizationsDelegate<WidgetsLocalizations> {
+class RtlOverrideWidgetsDelegate
+    extends LocalizationsDelegate<WidgetsLocalizations> {
   const RtlOverrideWidgetsDelegate();
   @override
   bool isSupported(Locale locale) => true;
   @override
-  Future<WidgetsLocalizations> load(Locale locale) async => const RtlOverrideWidgetsLocalization();
+  Future<WidgetsLocalizations> load(Locale locale) async =>
+      const RtlOverrideWidgetsLocalization();
   @override
-  bool shouldReload(LocalizationsDelegate<WidgetsLocalizations> oldDelegate) => false;
+  bool shouldReload(LocalizationsDelegate<WidgetsLocalizations> oldDelegate) =>
+      false;
 }
 
 class RtlOverrideWidgetsLocalization implements WidgetsLocalizations {

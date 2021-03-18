@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-
 import 'package:meta/meta.dart';
 
 import '../base/file_system.dart';
@@ -30,7 +28,8 @@ class CleanCommand extends FlutterCommand {
   final String description = 'Delete the build/ and .dart_tool/ directories.';
 
   @override
-  Future<Set<DevelopmentArtifact>> get requiredArtifacts async => const <DevelopmentArtifact>{};
+  Future<Set<DevelopmentArtifact>> get requiredArtifacts async =>
+      const <DevelopmentArtifact>{};
 
   @override
   Future<FlutterCommandResult> runCommand() async {
@@ -46,6 +45,7 @@ class CleanCommand extends FlutterCommand {
     deleteFile(buildDir);
 
     deleteFile(flutterProject.dartTool);
+    deleteFile(flutterProject.packagesFile);
 
     deleteFile(flutterProject.android.ephemeralDirectory);
 
@@ -70,13 +70,14 @@ class CleanCommand extends FlutterCommand {
     }
     final Status xcodeStatus = globals.logger.startProgress(
       'Cleaning Xcode workspace...',
-      timeout: timeoutConfiguration.slowOperation,
     );
     try {
       final Directory xcodeWorkspace = xcodeProject.xcodeWorkspace;
-      final XcodeProjectInfo projectInfo = await globals.xcodeProjectInterpreter.getInfo(xcodeWorkspace.parent.path);
+      final XcodeProjectInfo projectInfo = await globals.xcodeProjectInterpreter
+          .getInfo(xcodeWorkspace.parent.path);
       for (final String scheme in projectInfo.schemes) {
-        await globals.xcodeProjectInterpreter.cleanWorkspace(xcodeWorkspace.path, scheme, verbose: _verbose);
+        await globals.xcodeProjectInterpreter
+            .cleanWorkspace(xcodeWorkspace.path, scheme, verbose: _verbose);
       }
     } on Exception catch (error) {
       globals.printTrace('Could not clean Xcode workspace: $error');
@@ -98,15 +99,13 @@ class CleanCommand extends FlutterCommand {
     }
     final Status deletionStatus = globals.logger.startProgress(
       'Deleting ${file.basename}...',
-      timeout: timeoutConfiguration.fastOperation,
     );
     try {
       file.deleteSync(recursive: true);
     } on FileSystemException catch (error) {
       final String path = file.path;
       if (globals.platform.isWindows) {
-        globals.printError(
-          'Failed to remove $path. '
+        globals.printError('Failed to remove $path. '
             'A program may still be using a file in the directory or the directory itself. '
             'To find and stop such a program, see: '
             'https://superuser.com/questions/1333118/cant-delete-empty-folder-because-it-is-used');

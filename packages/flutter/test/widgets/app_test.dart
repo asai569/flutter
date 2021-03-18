@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart = 2.8
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -33,7 +31,7 @@ void main() {
     await tester.pumpWidget(
       WidgetsApp(
         key: key,
-        builder: (BuildContext context, Widget child) {
+        builder: (BuildContext context, Widget? child) {
           return const Placeholder();
         },
         color: const Color(0xFF123456),
@@ -42,18 +40,19 @@ void main() {
     expect(find.byKey(key), findsOneWidget);
   });
 
-  testWidgets('WidgetsApp can override default key bindings', (WidgetTester tester) async {
-    bool checked = false;
+  testWidgets('WidgetsApp can override default key bindings',
+      (WidgetTester tester) async {
+    bool? checked = false;
     final GlobalKey key = GlobalKey();
     await tester.pumpWidget(
       WidgetsApp(
         key: key,
-        builder: (BuildContext context, Widget child) {
+        builder: (BuildContext context, Widget? child) {
           return Material(
             child: Checkbox(
               value: checked,
               autofocus: true,
-              onChanged: (bool value) {
+              onChanged: (bool? value) {
                 checked = value;
               },
             ),
@@ -76,15 +75,15 @@ void main() {
         actions: <Type, Action<Intent>>{
           TestIntent: action,
         },
-        shortcuts: <LogicalKeySet, Intent> {
+        shortcuts: <LogicalKeySet, Intent>{
           LogicalKeySet(LogicalKeyboardKey.space): const TestIntent(),
         },
-        builder: (BuildContext context, Widget child) {
+        builder: (BuildContext context, Widget? child) {
           return Material(
             child: Checkbox(
               value: checked,
               autofocus: true,
-              onChanged: (bool value) {
+              onChanged: (bool? value) {
                 checked = value;
               },
             ),
@@ -103,17 +102,18 @@ void main() {
     expect(action.calls, equals(1));
   });
 
-  testWidgets('WidgetsApp default activation key mappings work', (WidgetTester tester) async {
-    bool checked = false;
+  testWidgets('WidgetsApp default activation key mappings work',
+      (WidgetTester tester) async {
+    bool? checked = false;
 
     await tester.pumpWidget(
       WidgetsApp(
-        builder: (BuildContext context, Widget child) {
+        builder: (BuildContext context, Widget? child) {
           return Material(
             child: Checkbox(
               value: checked,
               autofocus: true,
-              onChanged: (bool value) {
+              onChanged: (bool? value) {
                 checked = value;
               },
             ),
@@ -147,15 +147,15 @@ void main() {
 
   group('error control test', () {
     Future<void> expectFlutterError({
-      GlobalKey<NavigatorState> key,
-      Widget widget,
-      WidgetTester tester,
-      String errorMessage,
+      required GlobalKey<NavigatorState> key,
+      required Widget widget,
+      required WidgetTester tester,
+      required String errorMessage,
     }) async {
       await tester.pumpWidget(widget);
-      FlutterError error;
+      late FlutterError error;
       try {
-        key.currentState.pushNamed('/path');
+        key.currentState!.pushNamed('/path');
       } on FlutterError catch (e) {
         error = e;
       } finally {
@@ -165,7 +165,8 @@ void main() {
       }
     }
 
-    testWidgets('push unknown route when onUnknownRoute is null', (WidgetTester tester) async {
+    testWidgets('push unknown route when onUnknownRoute is null',
+        (WidgetTester tester) async {
       final GlobalKey<NavigatorState> key = GlobalKey<NavigatorState>();
       expectFlutterError(
         key: key,
@@ -175,25 +176,25 @@ void main() {
           home: Container(),
           onGenerateRoute: (_) => null,
         ),
-        errorMessage:
-          'FlutterError\n'
-          '   Could not find a generator for route RouteSettings("/path", null)\n'
-          '   in the _WidgetsAppState.\n'
-          '   Make sure your root app widget has provided a way to generate\n'
-          '   this route.\n'
-          '   Generators for routes are searched for in the following order:\n'
-          '    1. For the "/" route, the "home" property, if non-null, is used.\n'
-          '    2. Otherwise, the "routes" table is used, if it has an entry for\n'
-          '   the route.\n'
-          '    3. Otherwise, onGenerateRoute is called. It should return a\n'
-          '   non-null value for any valid route not handled by "home" and\n'
-          '   "routes".\n'
-          '    4. Finally if all else fails onUnknownRoute is called.\n'
-          '   Unfortunately, onUnknownRoute was not set.\n',
+        errorMessage: 'FlutterError\n'
+            '   Could not find a generator for route RouteSettings("/path", null)\n'
+            '   in the _WidgetsAppState.\n'
+            '   Make sure your root app widget has provided a way to generate\n'
+            '   this route.\n'
+            '   Generators for routes are searched for in the following order:\n'
+            '    1. For the "/" route, the "home" property, if non-null, is used.\n'
+            '    2. Otherwise, the "routes" table is used, if it has an entry for\n'
+            '   the route.\n'
+            '    3. Otherwise, onGenerateRoute is called. It should return a\n'
+            '   non-null value for any valid route not handled by "home" and\n'
+            '   "routes".\n'
+            '    4. Finally if all else fails onUnknownRoute is called.\n'
+            '   Unfortunately, onUnknownRoute was not set.\n',
       );
     });
 
-    testWidgets('push unknown route when onUnknownRoute returns null', (WidgetTester tester) async {
+    testWidgets('push unknown route when onUnknownRoute returns null',
+        (WidgetTester tester) async {
       final GlobalKey<NavigatorState> key = GlobalKey<NavigatorState>();
       expectFlutterError(
         key: key,
@@ -204,61 +205,49 @@ void main() {
           onGenerateRoute: (_) => null,
           onUnknownRoute: (_) => null,
         ),
-        errorMessage:
-          'FlutterError\n'
-          '   The onUnknownRoute callback returned null.\n'
-          '   When the _WidgetsAppState requested the route\n'
-          '   RouteSettings("/path", null) from its onUnknownRoute callback,\n'
-          '   the callback returned null. Such callbacks must never return\n'
-          '   null.\n' ,
+        errorMessage: 'FlutterError\n'
+            '   The onUnknownRoute callback returned null.\n'
+            '   When the _WidgetsAppState requested the route\n'
+            '   RouteSettings("/path", null) from its onUnknownRoute callback,\n'
+            '   the callback returned null. Such callbacks must never return\n'
+            '   null.\n',
       );
     });
   });
 
-  testWidgets('WidgetsApp can customize initial routes', (WidgetTester tester) async {
+  testWidgets('WidgetsApp can customize initial routes',
+      (WidgetTester tester) async {
     final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-    await tester.pumpWidget(
-      WidgetsApp(
-        navigatorKey: navigatorKey,
-        onGenerateInitialRoutes: (String initialRoute) {
-          expect(initialRoute, '/abc');
-          return <Route<void>>[
-            PageRouteBuilder<void>(
-              pageBuilder: (
-                BuildContext context,
-                Animation<double> animation,
-                Animation<double> secondaryAnimation) {
-                return const Text('non-regular page one');
-              }
-            ),
-            PageRouteBuilder<void>(
-              pageBuilder: (
-                BuildContext context,
-                Animation<double> animation,
-                Animation<double> secondaryAnimation) {
-                return const Text('non-regular page two');
-              }
-            ),
-          ];
-        },
-        initialRoute: '/abc',
-        onGenerateRoute: (RouteSettings settings) {
-          return PageRouteBuilder<void>(
-            pageBuilder: (
-              BuildContext context,
+    await tester.pumpWidget(WidgetsApp(
+      navigatorKey: navigatorKey,
+      onGenerateInitialRoutes: (String initialRoute) {
+        expect(initialRoute, '/abc');
+        return <Route<void>>[
+          PageRouteBuilder<void>(pageBuilder: (BuildContext context,
               Animation<double> animation,
               Animation<double> secondaryAnimation) {
-              return const Text('regular page');
-            }
-          );
-        },
-        color: const Color(0xFF123456),
-      )
-    );
+            return const Text('non-regular page one');
+          }),
+          PageRouteBuilder<void>(pageBuilder: (BuildContext context,
+              Animation<double> animation,
+              Animation<double> secondaryAnimation) {
+            return const Text('non-regular page two');
+          }),
+        ];
+      },
+      initialRoute: '/abc',
+      onGenerateRoute: (RouteSettings settings) {
+        return PageRouteBuilder<void>(pageBuilder: (BuildContext context,
+            Animation<double> animation, Animation<double> secondaryAnimation) {
+          return const Text('regular page');
+        });
+      },
+      color: const Color(0xFF123456),
+    ));
     expect(find.text('non-regular page two'), findsOneWidget);
     expect(find.text('non-regular page one'), findsNothing);
     expect(find.text('regular page'), findsNothing);
-    navigatorKey.currentState.pop();
+    navigatorKey.currentState!.pop();
     await tester.pumpAndSettle();
     expect(find.text('non-regular page two'), findsNothing);
     expect(find.text('non-regular page one'), findsOneWidget);
@@ -266,22 +255,23 @@ void main() {
   });
 
   testWidgets('WidgetsApp.router works', (WidgetTester tester) async {
-    final PlatformRouteInformationProvider provider = PlatformRouteInformationProvider(
+    final PlatformRouteInformationProvider provider =
+        PlatformRouteInformationProvider(
       initialRouteInformation: const RouteInformation(
         location: 'initial',
       ),
     );
-    final SimpleNavigatorRouterDelegate delegate = SimpleNavigatorRouterDelegate(
-      builder: (BuildContext context, RouteInformation information) {
-        return Text(information.location);
-      },
-      onPopPage: (Route<void> route, void result, SimpleNavigatorRouterDelegate delegate) {
-        delegate.routeInformation = const RouteInformation(
-          location: 'popped',
-        );
-        return route.didPop(result);
-      }
-    );
+    final SimpleNavigatorRouterDelegate delegate =
+        SimpleNavigatorRouterDelegate(
+            builder: (BuildContext context, RouteInformation information) {
+      return Text(information.location!);
+    }, onPopPage: (Route<void> route, void result,
+                SimpleNavigatorRouterDelegate delegate) {
+      delegate.routeInformation = const RouteInformation(
+        location: 'popped',
+      );
+      return route.didPop(result);
+    });
     await tester.pumpWidget(WidgetsApp.router(
       routeInformationProvider: provider,
       routeInformationParser: SimpleRouteInformationParser(),
@@ -291,17 +281,24 @@ void main() {
     expect(find.text('initial'), findsOneWidget);
 
     // Simulate android back button intent.
-    final ByteData message = const JSONMethodCodec().encodeMethodCall(const MethodCall('popRoute'));
-    await ServicesBinding.instance.defaultBinaryMessenger.handlePlatformMessage('flutter/navigation', message, (_) { });
+    final ByteData message =
+        const JSONMethodCodec().encodeMethodCall(const MethodCall('popRoute'));
+    await ServicesBinding.instance!.defaultBinaryMessenger
+        .handlePlatformMessage('flutter/navigation', message, (_) {});
     await tester.pumpAndSettle();
     expect(find.text('popped'), findsOneWidget);
   });
 
-  testWidgets('WidgetsApp.router has correct default', (WidgetTester tester) async {
-    final SimpleNavigatorRouterDelegate delegate = SimpleNavigatorRouterDelegate(
+  testWidgets('WidgetsApp.router has correct default',
+      (WidgetTester tester) async {
+    final SimpleNavigatorRouterDelegate delegate =
+        SimpleNavigatorRouterDelegate(
       builder: (BuildContext context, RouteInformation information) {
-        return Text(information.location);
+        return Text(information.location!);
       },
+      onPopPage: (Route<Object?> route, Object? result,
+              SimpleNavigatorRouterDelegate delegate) =>
+          true,
     );
     await tester.pumpWidget(WidgetsApp.router(
       routeInformationParser: SimpleRouteInformationParser(),
@@ -312,10 +309,13 @@ void main() {
   });
 }
 
-typedef SimpleRouterDelegateBuilder = Widget Function(BuildContext, RouteInformation);
-typedef SimpleNavigatorRouterDelegatePopPage<T> = bool Function(Route<T> route, T result, SimpleNavigatorRouterDelegate delegate);
+typedef SimpleRouterDelegateBuilder = Widget Function(
+    BuildContext, RouteInformation);
+typedef SimpleNavigatorRouterDelegatePopPage<T> = bool Function(
+    Route<T> route, T result, SimpleNavigatorRouterDelegate delegate);
 
-class SimpleRouteInformationParser extends RouteInformationParser<RouteInformation> {
+class SimpleRouteInformationParser
+    extends RouteInformationParser<RouteInformation> {
   SimpleRouteInformationParser();
 
   @override
@@ -329,24 +329,25 @@ class SimpleRouteInformationParser extends RouteInformationParser<RouteInformati
   }
 }
 
-class SimpleNavigatorRouterDelegate extends RouterDelegate<RouteInformation> with PopNavigatorRouterDelegateMixin<RouteInformation>, ChangeNotifier {
+class SimpleNavigatorRouterDelegate extends RouterDelegate<RouteInformation>
+    with PopNavigatorRouterDelegateMixin<RouteInformation>, ChangeNotifier {
   SimpleNavigatorRouterDelegate({
-    @required this.builder,
-    this.onPopPage,
+    required this.builder,
+    required this.onPopPage,
   });
 
   @override
   GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   RouteInformation get routeInformation => _routeInformation;
-  RouteInformation _routeInformation;
+  late RouteInformation _routeInformation;
   set routeInformation(RouteInformation newValue) {
     _routeInformation = newValue;
     notifyListeners();
   }
 
-  SimpleRouterDelegateBuilder builder;
-  SimpleNavigatorRouterDelegatePopPage<void> onPopPage;
+  final SimpleRouterDelegateBuilder builder;
+  final SimpleNavigatorRouterDelegatePopPage<void> onPopPage;
 
   @override
   Future<void> setNewRoutePath(RouteInformation configuration) {

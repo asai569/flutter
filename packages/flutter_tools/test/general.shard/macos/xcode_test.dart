@@ -39,14 +39,16 @@ void main() {
 
     group('Xcode', () {
       Xcode xcode;
+      MockXcodeProjectInterpreter mockXcodeProjectInterpreter;
 
       setUp(() {
+        mockXcodeProjectInterpreter = MockXcodeProjectInterpreter();
         xcode = Xcode(
           logger: logger,
           platform: FakePlatform(operatingSystem: 'macos'),
           fileSystem: MemoryFileSystem.test(),
           processManager: processManager,
-          xcodeProjectInterpreter: MockXcodeProjectInterpreter(),
+          xcodeProjectInterpreter: mockXcodeProjectInterpreter,
         );
       });
 
@@ -81,8 +83,8 @@ void main() {
           logger: logger,
           xcode: mockXcode,
           platform: null,
-          artifacts: MockArtifacts(),
-          cache: MockCache(),
+          artifacts: Artifacts.test(),
+          cache: Cache.test(),
           iproxy: IProxy.test(logger: logger, processManager: processManager),
         );
         when(mockXcode.xcrunCommand()).thenReturn(<String>['xcrun']);
@@ -361,21 +363,13 @@ void main() {
           testWithoutContext('--show-sdk-path macosx', () async {
             fakeProcessManager.addCommand(const FakeCommand(
               command: <String>['xcrun', '--sdk', 'macosx', '--show-sdk-path'],
-              stdout: sdkroot,
             ));
 
             expect(await xcode.sdkLocation(SdkType.macOS), sdkroot);
             expect(fakeProcessManager.hasRemainingExpectations, isFalse);
           });
-
-          testWithoutContext('--show-sdk-path fails', () async {
-            fakeProcessManager.addCommand(const FakeCommand(
-              command: <String>['xcrun', '--sdk', 'iphoneos', '--show-sdk-path'],
-              exitCode: 1,
-              stderr: 'xcrun: error:',
-            ));
-
-            expect(() async => await xcode.sdkLocation(SdkType.iPhone),
+            expect(() async => await xcode.sdkLocation(EnvironmentType.physical),
+>>>>>>> 8962f6dc68ec8e2206ac2fa874da4a453856c7d3
               throwsToolExit(message: 'Could not find SDK location'));
             expect(fakeProcessManager.hasRemainingExpectations, isFalse);
           });
@@ -386,20 +380,16 @@ void main() {
     group('xcdevice', () {
       XCDevice xcdevice;
       MockXcode mockXcode;
-      MockArtifacts mockArtifacts;
-      MockCache mockCache;
 
       setUp(() {
         mockXcode = MockXcode();
-        mockArtifacts = MockArtifacts();
-        mockCache = MockCache();
         xcdevice = XCDevice(
           processManager: fakeProcessManager,
           logger: logger,
           xcode: mockXcode,
           platform: null,
-          artifacts: mockArtifacts,
-          cache: mockCache,
+          artifacts: Artifacts.test(),
+          cache: Cache.test(),
           iproxy: IProxy.test(logger: logger, processManager: fakeProcessManager),
         );
         when(mockXcode.xcrunCommand()).thenReturn(<String>['xcrun']);
@@ -763,7 +753,7 @@ void main() {
       "underlyingErrors" : [
         {
           "code" : 5,
-          "failureReason" : "allowsSecureServices: 1. isConnected: 0. Platform: <DVTPlatform:0x7f804ce32880:'com.apple.platform.iphoneos':<DVTFilePath:0x7f804ce32800:'\/Users\/Applications\/Xcode.app\/Contents\/Developer\/Platforms\/iPhoneOS.platform'>>. DTDKDeviceIdentifierIsIDID: 0",
+          "failureReason" : "allowsSecureServices: 1. isConnected: 0. Platform: <DVTPlatform:0x7f804ce32880:'com.apple.platform.iphoneos':<DVTFilePath:0x7f804ce32800:'/Users/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform'>>. DTDKDeviceIdentifierIsIDID: 0",
           "description" : "📱<DVTiOSDevice (0x7f801f190450), iPhone, iPhone, 13.3 (17C54), d83d5bc53967baa0ee18626ba87b6254b2ab5418> -- Failed _shouldMakeReadyForDevelopment check even though device is not locked by passcode.",
           "recoverySuggestion" : "",
           "domain" : "com.apple.platform.iphoneos"
@@ -852,5 +842,8 @@ void main() {
 class MockXcode extends Mock implements Xcode {}
 class MockProcessManager extends Mock implements ProcessManager {}
 class MockXcodeProjectInterpreter extends Mock implements XcodeProjectInterpreter {}
+<<<<<<< HEAD
 class MockArtifacts extends Mock implements Artifacts {}
 class MockCache extends Mock implements Cache {}
+=======
+>>>>>>> 8962f6dc68ec8e2206ac2fa874da4a453856c7d3
